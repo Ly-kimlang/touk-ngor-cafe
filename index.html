@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ទូក-ង កាហ្វេ - ប្រព័ន្ធលក់ និងគ្រប់គ្រង</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kantenam&family=Moul&family=Siemreap&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; font-family: 'Siemreap', sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f4f6f8; display: flex; height: 100vh; overflow: hidden; }
+        
+        /* Layout Sidebar/Menu */
+        .main-content { flex: 1; display: flex; flex-direction: column; padding: 20px; overflow-y: auto; }
+        .sidebar { width: 380px; background: white; border-left: 2px solid #e2e8f0; display: flex; flex-direction: column; padding: 20px; }
+        
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        h1 { font-family: 'Moul', cursive; color: #8b4513; font-size: 22px; }
+        .report-btn { background: #27ae60; color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .report-btn:hover { background: #219150; }
+
+        /* Category Filter Nav */
+        .categories { display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
+        .cat-btn { padding: 8px 16px; border: 1px solid #cbd5e1; background: white; border-radius: 20px; cursor: pointer; white-space: nowrap; font-weight: bold; }
+        .cat-btn.active { background: #8b4513; color: white; border-color: #8b4513; }
+
+        /* Drink Grid */
+        .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
+        .drink-card { background: white; border-radius: 12px; padding: 15px; text-align: center; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); cursor: pointer; transition: 0.2s; }
+        .drink-card:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .drink-title { font-weight: bold; font-size: 15px; color: #334155; margin-bottom: 5px; }
+        .drink-price { color: #d97706; font-weight: bold; font-size: 16px; }
+
+        /* Cart Section */
+        .cart-header { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #1e293b; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; }
+        .cart-items { flex: 1; overflow-y: auto; }
+        .cart-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; background: #f8fafc; padding: 10px; border-radius: 8px; }
+        .item-controls button { width: 25px; height: 25px; border: none; background: #cbd5e1; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        .checkout-box { border-top: 2px solid #f1f5f9; padding-top: 15px; }
+        .total-price { font-size: 20px; font-weight: bold; color: #b91c1c; display: flex; justify-content: space-between; margin-bottom: 15px; }
+        .pay-btn { width: 100%; background: #8b4513; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .pay-btn:hover { background: #6f370f; }
+
+        /* Modal Report */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
+        .close-btn { float: right; font-size: 20px; cursor: pointer; font-weight: bold; }
+        .report-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .report-table th, .report-table td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; }
+        .report-table th { background: #f1f5f9; }
+    </style>
+</head>
+<body>
+
+    <!-- Main Content Menu -->
+    <div class="main-content">
+        <header>
+            <h1>ទូក-ង កាហ្វេ (TOUK NGOR Café)</h1>
+            <button class="report-btn" onclick="openReport()">📊 របាយការណ៍លក់ប្រចាំថ្ងៃ</button>
+        </header>
+
+        <!-- Filter Categories -->
+        <div class="categories">
+            <button class="cat-btn active" onclick="filterMenu('ALL')">ទាំងអស់</button>
+            <button class="cat-btn" onclick="filterMenu('HOT')">ក្តៅ - HOT</button>
+            <button class="cat-btn" onclick="filterMenu('ICED')">ទឹកកក - ICED</button>
+            <button class="cat-btn" onclick="filterMenu('TEA')">តែ - TEA</button>
+            <button class="cat-btn" onclick="filterMenu('SODA')">សូដា - SODA</button>
+            <button class="cat-btn" onclick="filterMenu('FRAPPE')">ក្រឡុក - FRAPPE</button>
+        </div>
+
+        <!-- Drinks Grid -->
+        <div class="menu-grid" id="menu-grid"></div>
+    </div>
+
+    <!-- Sidebar Order Cart -->
+    <div class="sidebar">
+        <div class="cart-header">🛒 បញ្ជីកម្រ៉ង់ទិញ (Order)</div>
+        <div class="cart-items" id="cart-items"></div>
+        <div class="checkout-box">
+            <div class="total-price">
+                <span>សរុប៖</span>
+                <span id="total-amount">0 ៛</span>
+            </div>
+            <button class="pay-btn" onclick="checkout()">ទូទាត់ប្រាក់ (Checkout)</button>
+        </div>
+    </div>
+
+    <!-- Daily Report Modal -->
+    <div class="modal" id="reportModal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeReport()">&times;</span>
+            <h2>📊 របាយការណ៍លក់ប្រចាំថ្ងៃ</h2>
+            <hr style="margin: 10px 0;">
+            <p><strong>កែវសរុប៖</strong> <span id="report-total-cups">0</span> កែវ</p>
+            <p><strong>ចំណូលសរុប៖</strong> <span id="report-total-sales" style="color:green; font-weight:bold;">0 ៛</span></p>
+
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>ឈ្មោះភេសជ្ជៈ</th>
+                        <th>ចំនួន (កែវ)</th>
+                        <th>សរុប (៛)</th>
+                    </tr>
+                </thead>
+                <tbody id="report-list"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // 1. Menu Data From Image
+        const menuData = [
+            // HOT
+            { id: 1, name: 'អ៊ែប្រេសស្វ (Hot Espresso)', price: 4500, cat: 'HOT' },
+            { id: 2, name: 'អាមេរិកខាណូ (Hot Americano)', price: 5000, cat: 'HOT' },
+            { id: 3, name: 'កាហ្វេឡាតេក្តៅ (Hot Latte)', price: 6000, cat: 'HOT' },
+            { id: 4, name: 'កាពូឈីណូក្តៅ (Hot Cappuccino)', price: 6000, cat: 'HOT' },
+            { id: 5, name: 'តែបៃតងក្តៅ (Hot Green Tea)', price: 6000, cat: 'HOT' },
+            { id: 6, name: 'តែក្រហមក្តៅ (Hot Red Tea)', price: 6000, cat: 'HOT' },
+            // ICED
+            { id: 7, name: 'ទូក-ង កាហ្វេ (Touk Ngor Coffee)', price: 7000, cat: 'ICED' },
+            { id: 8, name: 'ឡាតេទឹករកក (Iced Latte)', price: 7000, cat: 'ICED' },
+            { id: 9, name: 'កាពូឈីណូទឹកកក (Iced Cappuccino)', price: 7000, cat: 'ICED' },
+            { id: 10, name: 'កាហ្វេខ្មៅទឹកកក (Iced Americano)', price: 6000, cat: 'ICED' },
+            { id: 11, name: 'ទឹកដោះគោស្រស់ (Fresh milk)', price: 6000, cat: 'ICED' },
+            { id: 12, name: 'ផាសិន ទឹកដោះគោ (Passion Milk)', price: 6000, cat: 'ICED' },
+            // TEA
+            { id: 13, name: 'តែបៃតង ទឹកដោះគោ (Milk Green Tea)', price: 6000, cat: 'TEA' },
+            { id: 14, name: 'តែក្រហម ទឹកដោះគោ (Milk Red Tea)', price: 6000, cat: 'TEA' },
+            { id: 15, name: 'តែក្រហម ក្រូចឆ្មា (Red Tea Limon)', price: 6000, cat: 'TEA' },
+            // SODA
+            { id: 16, name: 'ប៊្លូប៊រី (BlueBerry Soda)', price: 6000, cat: 'SODA' },
+            { id: 17, name: 'ស្ត្រប៊រី (Strawberry Soda)', price: 6000, cat: 'SODA' },
+            { id: 18, name: 'ផាសិន (Passion Soda)', price: 6000, cat: 'SODA' },
+            // FRAPPE
+            { id: 19, name: 'កាហ្វេទូក-ង ក្រឡុក (Touk Ngor Frappe)', price: 7500, cat: 'FRAPPE' },
+            { id: 20, name: 'ខារ៉ាម៉ែលក្រឡុក (Caramel Frappe)', price: 8000, cat: 'FRAPPE' },
+            { id: 21, name: 'សូកូឡាក្រឡុក (Chocolate Frappe)', price: 8000, cat: 'FRAPPE' },
+            { id: 22, name: 'ម៉ូកាក្រឡុក (Mocha Frappe)', price: 8000, cat: 'FRAPPE' },
+            { id: 23, name: 'តែបៃតងក្រឡុក (Green Tea Frappe)', price: 7500, cat: 'FRAPPE' }
+        ];
+
+        let cart = [];
+        let dailySales = {}; // រក្សាទុកទិន្នន័យលក់ប្រចាំថ្ងៃ
+
+        // Render Menu Items
+        function renderMenu(filter = 'ALL') {
+            const grid = document.getElementById('menu-grid');
+            grid.innerHTML = '';
+            const filteredData = filter === 'ALL' ? menuData : menuData.filter(d => d.cat === filter);
+
+            filteredData.forEach(item => {
+                grid.innerHTML += `
+                    <div class="drink-card" onclick="addToCart(${item.id})">
+                        <div class="drink-title">${item.name}</div>
+                        <div class="drink-price">${item.price.toLocaleString()} ៛</div>
+                    </div>
+                `;
+            });
+        }
+
+        // Filter Categories
+        function filterMenu(cat) {
+            document.querySelectorAll('.cat-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            renderMenu(cat);
+        }
+
+        // Add item to cart
+        function addToCart(id) {
+            const item = menuData.find(d => d.id === id);
+            const exist = cart.find(c => c.id === id);
+            if (exist) {
+                exist.qty += 1;
+            } else {
+                cart.push({ ...item, qty: 1 });
+            }
+            updateCart();
+        }
+
+        // Change Quantity
+        function changeQty(id, amount) {
+            const item = cart.find(c => c.id === id);
+            if (item) {
+                item.qty += amount;
+                if (item.qty <= 0) {
+                    cart = cart.filter(c => c.id !== id);
+                }
+            }
+            updateCart();
+        }
+
+        // Update Cart UI
+        function updateCart() {
+            const cartContainer = document.getElementById('cart-items');
+            cartContainer.innerHTML = '';
+            let total = 0;
+
+            cart.forEach(item => {
+                total += item.price * item.qty;
+                cartContainer.innerHTML += `
+                    <div class="cart-item">
+                        <div>
+                            <div><strong>${item.name}</strong></div>
+                            <div style="color:#d97706">${(item.price * item.qty).toLocaleString()} ៛</div>
+                        </div>
+                        <div class="item-controls">
+                            <button onclick="changeQty(${item.id}, -1)">-</button>
+                            <span style="margin:0 8px">${item.qty}</span>
+                            <button onclick="changeQty(${item.id}, 1)">+</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('total-amount').innerText = total.toLocaleString() + ' ៛';
+        }
+
+        // Checkout and Record Sales Data
+        function checkout() {
+            if (cart.length === 0) {
+                alert('សូមជ្រើសរើសភេសជ្ជៈមុននឹងទូទាត់!');
+                return;
+            }
+
+            // បញ្ចូលការលក់ទៅក្នុង daily sales
+            cart.forEach(item => {
+                if (dailySales[item.name]) {
+                    dailySales[item.name].qty += item.qty;
+                    dailySales[item.name].total += item.price * item.qty;
+                } else {
+                    dailySales[item.name] = {
+                        qty: item.qty,
+                        total: item.price * item.qty
+                    };
+                }
+            });
+
+            alert('ទូទាត់ប្រាក់ជោគជ័យ!');
+            cart = [];
+            updateCart();
+        }
+
+        // Open Report Modal
+        function openReport() {
+            document.getElementById('reportModal').style.display = 'flex';
+            const tbody = document.getElementById('report-list');
+            tbody.innerHTML = '';
+
+            let grandTotalCups = 0;
+            let grandTotalSales = 0;
+
+            for (let name in dailySales) {
+                grandTotalCups += dailySales[name].qty;
+                grandTotalSales += dailySales[name].total;
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${name}</td>
+                        <td>${dailySales[name].qty}</td>
+                        <td>${dailySales[name].total.toLocaleString()} ៛</td>
+                    </tr>
+                `;
+            }
+
+            document.getElementById('report-total-cups').innerText = grandTotalCups;
+            document.getElementById('report-total-sales').innerText = grandTotalSales.toLocaleString() + ' ៛';
+        }
+
+        function closeReport() {
+            document.getElementById('reportModal').style.display = 'none';
+        }
+
+        // Initial Load
+        renderMenu();
+    </script>
+</body>
+</html>
